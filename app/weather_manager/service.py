@@ -167,6 +167,7 @@ class weatherManager:
             if not location_data_response.get("data"):
                 response["error"] = "location does not exist"
                 response["status_code"] = HTTPStatus.BAD_REQUEST.value
+                return response
             
             location_details = location_data_response["data"][0]
             weather_data = await self.getWeatherData()
@@ -182,12 +183,13 @@ class weatherManager:
                     return weather_data
                 weather_data = weather_data["data"]
             
-                await self.setWeatherDataFromOpenWeather(weather_data)
+                self.setWeatherDataFromOpenWeather(weather_data)
                 insert_response = await self.insertWeatherData()
                 if insert_response.get("error"):
                     return insert_response
             
             weather_data = {
+                "city": location_details.get("city"),
                 "current_weather": f"{self.current_weather}",
                 "description": self.description,
                 "temperature": f"{self.temperature}{Units.TEMPERATURE.value}",
