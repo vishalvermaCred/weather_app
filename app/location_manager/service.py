@@ -12,7 +12,7 @@ from app.settings import (
     OPEN_WEATHER_GEO_PARAMS
 )
 
-LOGGER_KEY = "app.service"
+LOGGER_KEY = "app.location_manager.service"
 
 class locationManager:
     def __init__(self, kwargs: dict = {}) -> None:

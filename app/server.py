@@ -8,7 +8,7 @@ from quart_schema import QuartSchema, RequestSchemaValidationError
 from . import settings
 from data.database import Postgres
 from data.redis import RedisCache
-from app.location_manager.routes import bp
+from app.routes import bp
 from app.utils import (
     get_logger,
     VerifyEnv,

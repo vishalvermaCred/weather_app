@@ -3,6 +3,7 @@ from quart import Blueprint, current_app as app
 from quart_schema import validate_request, validate_querystring
 
 from app.location_manager.service import locationManager
+from app.weather_manager.service import weatherManager
 from app.settings import BASE_ROUTE, SERVICE_NAME
 from app.utils import send_api_response
 from app.validator import (
@@ -11,7 +12,7 @@ from app.validator import (
 )
 
 bp = Blueprint(SERVICE_NAME, __name__, url_prefix=BASE_ROUTE)
-LOGGER_KEY = "app.routes"
+LOGGER_KEY = "app.location_manager.routes"
 
 
 @bp.route("/public/health", methods=["GET"])
@@ -165,4 +166,27 @@ async def delete_location(**kwargs):
         f"location deleted successfully",
         True,
         status_code= HTTPStatus.OK.value
+    )
+
+
+@bp.route("/weather/<location_id>", methods=["GET"])
+async def get_forecast(**kwargs):
+    """
+    get forecast using third api and store the result
+    """
+    app.logger.info(f"{LOGGER_KEY}.get_forecast")
+    weather_manager = weatherManager(kwargs)
+    forecast_data_response = await weather_manager.getForecast()
+    if forecast_data_response.get("error"):
+        return send_api_response(
+            f"failed to fetch the forecast: {forecast_data_response.get('error')}",
+            False,
+            status_code=forecast_data_response.get("status_code")
+        )
+    
+    return send_api_response(
+        f"forecast fetched",
+        True,
+        data= forecast_data_response.get("data"),
+        status_code=HTTPStatus.OK.value
     )

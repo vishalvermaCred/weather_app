@@ -1,5 +1,6 @@
 from enum import Enum
 
+UNIT = "metric"
 
 class Units(Enum):
     TEMPERATURE = "°C"
