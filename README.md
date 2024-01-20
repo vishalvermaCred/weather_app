@@ -39,7 +39,7 @@ uvicorn app.server:app --reload --port 9200
 ### POST /locations
 #### Request Body
 1. The request body should be in raw JSON format.
-2. It should include the following parameters:
+2. It should include the following parameters: <br />
     I. city (string): The name of the city for the location. <br />
    II. latitude (number): The latitude coordinate of the location. (optional) <br />
   III. longitude (number): The longitude coordinate of the location. (optional) <br />
