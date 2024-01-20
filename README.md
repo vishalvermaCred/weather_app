@@ -80,6 +80,7 @@ curl --location 'http://localhost:9200/locations' \
 }'
 ```
 
+
 ### GET /locations
 #### Sample Response
 ```bash
@@ -110,4 +111,159 @@ curl --location 'http://localhost:9200/locations' \
 #### CURL
 ```bash
 curl --location 'http://localhost:9200/locations'
+```
+
+
+### GET /locations/<location_id>
+#### Sample Response
+```bash
+{
+    "data": [
+        {
+            "city": "indore",
+            "country": "IN",
+            "latitude": "22.7203616",
+            "location_id": "16dac885-86dc-41d3-bedc-775a5703dc8e",
+            "longitude": "75.8681996",
+            "state": "Madhya Pradesh"
+        }
+    ],
+    "message": "location fetched successfully",
+    "success": true
+}
+```
+
+#### CURL
+```bash
+curl --location 'http://localhost:9200/locations/16dac885-86dc-41d3-bedc-775a5703dc8e'
+```
+
+
+### PUT /locations/<location_id>
+#### Sample Body
+```bash
+{
+    "city": "Manali",
+    "latitude": 32.2454608,
+    "longitude": 77.1872926,
+    "state": "Himachal Pradesh",
+    "country": "INDIA"
+}
+```
+
+#### Sample Response
+```bash
+{
+    "data": "16dac885-86dc-41d3-bedc-775a5703dc8e",
+    "message": "location updated successfully",
+    "success": true
+}
+```
+
+#### CURL
+```bash
+curl --location --request PUT 'http://localhost:9200/locations/16dac885-86dc-41d3-bedc-775a5703dc8e' \
+--header 'Content-Type: application/json' \
+--data '{
+    "city": "indore"
+}'
+```
+
+
+### DELETE /locations/<location_id>
+#### Sample Response
+```bash
+{
+    "message": "location deleted successfully",
+    "success": true
+}
+```
+
+#### CURL
+```bash
+curl --location --request DELETE 'http://localhost:9200/locations/bd2ef8c8-5662-4562-82be-dc04dc7c904b'
+```
+
+
+### GET /weather/<location_id>
+#### Sample Response
+```bash
+{
+    "data": 
+    {
+        "air_pressure": "1025 hPa",
+        "city": "manali",
+        "current_weather": "Clouds",
+        "description": "scattered clouds",
+        "feels_like_temperature": "-3°C",
+        "humidity": "59%",
+        "temperature": "0°C",
+        "windspeed": "3.39 m/s"
+    },
+    "message": "forecast retrieved successfully",
+    "success": true
+}
+```
+
+#### CURL
+```bash
+curl --location 'http://localhost:9200/weather/28efb9d7-4911-4c61-852c-b46fb926daed'
+```
+
+
+### GET /history/<location_id>
+#### Sample Response
+```bash
+{
+    "data": 
+    {
+        "history_data": 
+        [
+            {
+                "air_pressure": 1016,
+                "current_weather": "Clouds",
+                "description": "broken clouds",
+                "feels_like_temperature": 22,
+                "humidity": 46,
+                "temperature": 22,
+                "windspeed": 3
+            }
+        ],
+        "summary": 
+        {
+            "air_pressure": 
+            {
+                "average": 1016.0,
+                "max": 1016,
+                "min": 1016
+            },
+            "humidity": 
+            {
+                "average": 46.0,
+                "max": 46,
+                "min": 46
+            },
+            "temperature": 
+            {
+                "average": 22.0,
+                "max": 22,
+                "min": 22
+            },
+            "windspeed": 
+            {
+                "average": 3.0,
+                "max": 3,
+                "min": 3
+            }
+        }
+    },
+    "message": "history retrieved successfully",
+    "success": true
+}
+```
+
+#### CURL
+value of days can be 7 or 15 or 30 only
+```bash
+curl --location 'http://localhost:9200/history/16dac885-86dc-41d3-bedc-775a5703dc8e?days=7'
 ```

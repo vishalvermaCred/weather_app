@@ -41,7 +41,7 @@ async def get_locations(**kwargs):
         )
     
     return send_api_response(
-        f"all locations added by user",
+        f"location/s retrieved successfully",
         True,
         data= locations_data.get("data"),
         status_code= HTTPStatus.OK.value
@@ -197,7 +197,7 @@ async def get_forecast(**kwargs):
         )
     
     return send_api_response(
-        f"forecast fetched",
+        f"forecast retrieved successfully",
         True,
         data= forecast_data_response.get("data"),
         status_code=HTTPStatus.OK.value
@@ -225,7 +225,7 @@ async def get_history(**kwargs):
         )
 
     return send_api_response(
-        f"history fetched successfully",
+        f"history retrieved successfully",
         True,
         data = history_data_response['data'],
         status_code=HTTPStatus.OK.value
