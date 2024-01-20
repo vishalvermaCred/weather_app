@@ -37,9 +37,7 @@ class weatherManager:
         response = {"error": None, "data": [], "status_code": None}
         try:
             table_name = Tables.WEATHER.value["name"]
-            columns = Tables.WEATHER.value["columns"].copy()
-            columns.remove("created")
-            columns.remove("updated")
+            columns = Tables.WEATHER.value["get_columns"].copy()
             columns = ",".join(columns)
 
             query = f"SELECT {columns} FROM {table_name} where location_id='{self.location_id}' and now()-created <= INTERVAL '1 hour' order by created desc limit 1;"
@@ -56,7 +54,7 @@ class weatherManager:
 
     def setWeatherData(self, weather_data):
         """
-        populates the weather object
+        populates the weather object from DB data
         """
         app.logger.info(f"{LOGGER_KEY}.setWeatherData")
         self.current_weather = weather_data.get("current_weather")
@@ -102,6 +100,7 @@ class weatherManager:
                 "units": UNIT,
                 "appid": OPEN_WEATHER_API_KEY
             }
+            app.logger.info(f"{LOGGER_KEY}.getOpenWeatherData.url: {url}")
             async with aiohttp.ClientSession() as client:
                 api_response = await client.get(url, params=params)
                 status_code = api_response.status
@@ -132,7 +131,7 @@ class weatherManager:
                 self.weather_id = uuid4()
             
             table_name = Tables.WEATHER.value["name"]
-            columns = Tables.WEATHER.value["columns"]
+            columns = Tables.WEATHER.value["insert_columns"]
             columns = ",".join(columns)
             query = f"INSERT INTO {table_name} ({columns}) VALUES ('{self.weather_id}', '{self.location_id}', '{self.current_weather}'"
             query += f", '{self.description}'" if self.description else ", null"
@@ -182,6 +181,7 @@ class weatherManager:
         response = {"error": None, "data": [], "status_code": None}
 
         try:
+            # get the location details, as city name is required
             location_data_response = await self.location_manager.fetchLocations()
             if location_data_response.get("error"):
                 return location_data_response
@@ -191,35 +191,53 @@ class weatherManager:
                 return response
             location_details = location_data_response["data"][0]
 
-            weather_data = await self.getWeatherData()
-            if weather_data.get("error"):
-                return weather_data
-            weather_data = weather_data["data"]
-            if weather_data:
-                self.setWeatherData(weather_data)
+            # check in cache first
+            cached_weather_data_key = f"weather_{self.location_id}"
+            cached_weather_data = await app.redis.get(key=cached_weather_data_key)
+
+            if cached_weather_data:
+                # cache hit
+                app.logger.info(f"{LOGGER_KEY}.getForecast.cache_hit")
+                response["data"] = cached_weather_data
+            else:
+                # cache miss
+                app.logger.info(f"{LOGGER_KEY}.getForecast.cache_miss")
+
+                # if cache miss and diff(current_time, last entry) < 1 hour, get from DB
+                weather_data = await self.getWeatherData()
+                if weather_data.get("error"):
+                    return weather_data
+                weather_data = weather_data["data"]
+                if weather_data:
+                    self.setWeatherData(weather_data)
+                
+                # if it's been more than 1 hour get real time forecast
+                if not weather_data:
+                    weather_data_response = await self.getRealTimeWeatherData(location_details)
+                    if weather_data_response.get("error"):
+                        return weather_data_response
+                    weather_data = weather_data_response["data"]
+                
+                    self.setWeatherDataFromOpenWeather(weather_data)
+                    insert_response = await self.insertWeatherData()
+                    if insert_response.get("error"):
+                        return insert_response
             
-            if not weather_data:
-                weather_data_response = await self.getRealTimeWeatherData(location_details)
-                if weather_data_response.get("error"):
-                    return weather_data_response
-                weather_data = weather_data_response["data"]
-            
-                self.setWeatherDataFromOpenWeather(weather_data)
-                insert_response = await self.insertWeatherData()
-                if insert_response.get("error"):
-                    return insert_response
-            
-            weather_data_formatted = {
-                "city": location_details.get("city"),
-                "current_weather": f"{self.current_weather}",
-                "description": self.description,
-                "temperature": f"{self.temperature}{Units.TEMPERATURE.value}",
-                "feels_like_temperature": f"{self.feels_like_temperature}{Units.TEMPERATURE.value}",
-                "air_pressure": f"{self.air_pressure} {Units.AIR_PRESSURE.value}",
-                "humidity": f"{self.humidity}{Units.HUMIDITY.value}",
-                "windspeed": f"{self.windspeed} {Units.WINDSPEED.value}"
-            }
-            response["data"] = weather_data_formatted 
+                # format the weather data
+                weather_data_formatted = {
+                    "city": location_details.get("city"),
+                    "current_weather": f"{self.current_weather}",
+                    "description": self.description,
+                    "temperature": f"{self.temperature}{Units.TEMPERATURE.value}",
+                    "feels_like_temperature": f"{self.feels_like_temperature}{Units.TEMPERATURE.value}",
+                    "air_pressure": f"{self.air_pressure} {Units.AIR_PRESSURE.value}",
+                    "humidity": f"{self.humidity}{Units.HUMIDITY.value}",
+                    "windspeed": f"{self.windspeed} {Units.WINDSPEED.value}"
+                }
+                response["data"] = weather_data_formatted 
+
+                # set in redis
+                await app.redis.set(key=cached_weather_data_key, value=weather_data_formatted, expiry_time=3600)
         except Exception as e:
             app.logger.error(f"{LOGGER_KEY}.getForecast.exception: {str(e)}")
             response["error"] = str(e)
@@ -236,11 +254,7 @@ class weatherManager:
         response = {"error": None, "data": [], "status_code": None}
         try:
             table_name = Tables.WEATHER.value["name"]
-            columns = Tables.WEATHER.value["columns"].copy()
-            columns.remove("weather_id")
-            columns.remove("location_id")
-            columns.remove("created")
-            columns.remove("updated")
+            columns = Tables.WEATHER.value["get_columns"].copy()
             columns = ",".join(columns)
             interval = f"{self.days} days"
 
@@ -290,18 +304,30 @@ class weatherManager:
         response = {"error": None, "data": [], "status_code": None}
 
         try:
-            history_data = await self.getHistoricalWeatherData()
-            if history_data.get("error"):
-                return history_data
-            if not history_data.get("data"):
-                response["error"] = "No history data available"
-                response["status_code"] = HTTPStatus.OK.value
-            history_data = history_data["data"]
-            summary_response = self.getSummary(history_data)
-            response["data"] = {
-                "history_data": history_data,
-                "summary": summary_response
-            }
+            cached_history_data_key = f"history_{self.location_id}_{self.days}"
+            cached_history_data = await app.redis.get(cached_history_data_key)
+            if cached_history_data:
+                # cache hit
+                app.logger.info(f"{LOGGER_KEY}.getForecast.cache_hit")
+                response["data"] = cached_history_data
+            else:
+                # cache miss
+                app.logger.info(f"{LOGGER_KEY}.getForecast.cache_miss")
+                history_data = await self.getHistoricalWeatherData()
+                if history_data.get("error"):
+                    return history_data
+                if not history_data.get("data"):
+                    response["error"] = "No history data available"
+                    response["status_code"] = HTTPStatus.OK.value
+                history_data = history_data["data"]
+                summary_response = self.getSummary(history_data)
+                response["data"] = {
+                    "history_data": history_data,
+                    "summary": summary_response
+                }
+
+                #cached summary will expire after 6 hour
+                await app.redis.set(key=cached_history_data_key, value=response["data"], expiry_time=21600)
         except Exception as e:
             app.logger.error(f"{LOGGER_KEY}.getHistory.exception: {str(e)}")
             response["error"] = str(e)

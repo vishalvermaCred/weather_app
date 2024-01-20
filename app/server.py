@@ -17,6 +17,7 @@ from app.utils import (
     MissingEnvConfigsException,
 )
 
+# initializing app
 app = Quart(__name__)
 app.config.from_object(settings)
 QuartSchema(
@@ -28,7 +29,7 @@ QuartSchema(
     title="Weather Service API Documentation",
 )
 
-
+# stating required services before starting the app
 @app.before_serving
 async def _init():
     init_logger()
@@ -62,12 +63,13 @@ def _before_request():
     g.request_id = get_request_id()
 
 
+# initializing logger
 def init_logger():
     get_logger()
     app.logger.removeHandler(app.logger.handlers[0])
     return
 
-
+# initializing DB
 async def _init_db():
     db_conf = app.config.get("DB_CONFIGS")
     db_kwargs = {
@@ -83,6 +85,7 @@ async def _init_db():
     return
 
 
+# initializing redis
 async def _init_redis():
     app.redis = RedisCache(app.config.get("APP_NAME") + "_" + app.config.get("ENV"))
     redis_conf = app.config.get("REDIS")
@@ -90,6 +93,7 @@ async def _init_redis():
     return
 
 
+# registering blueprints
 def _register_blueprints():
     app.register_blueprint(bp)
     return

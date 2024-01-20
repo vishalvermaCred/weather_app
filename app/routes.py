@@ -67,6 +67,7 @@ async def add_locations(data: AddLocation):
             status_code=city_details.get("status_code")
         )
     
+    # return error if city exists
     if city_details.get("data"):
         return send_api_response(
             f"city {payload['city']} already exists",
@@ -102,6 +103,8 @@ async def put_location(data:PutLocation, **kwargs):
     data = data.dict()
     payload = {**data, **kwargs}
     location_manager = locationManager(payload)
+
+    # check if location exists for given location id
     locations_data = await location_manager.fetchLocations()
     if locations_data.get("error"):
         return send_api_response(
@@ -110,6 +113,7 @@ async def put_location(data:PutLocation, **kwargs):
             status_code=locations_data.get("status_code"),
         )
     
+    # if location does not exists return error
     if not locations_data.get("data"):
         return send_api_response(
             f"city with given location_id does not exists",
@@ -117,6 +121,7 @@ async def put_location(data:PutLocation, **kwargs):
             status_code=HTTPStatus.BAD_REQUEST.value
         )
     
+    # update location
     put_location_response = await location_manager.putLocation()
     if put_location_response.get("error"):
         return send_api_response(
@@ -140,6 +145,8 @@ async def delete_location(**kwargs):
     """
     app.logger.info(f"{LOGGER_KEY}.delete_location")
     location_manager = locationManager(kwargs)
+
+    # check if location exists for given location id
     locations_data = await location_manager.fetchLocations()
     if locations_data.get("error"):
         return send_api_response(
@@ -148,6 +155,7 @@ async def delete_location(**kwargs):
             status_code=locations_data.get("status_code"),
         )
     
+    #  if location does not exists return error
     if not locations_data.get("data"):
         return send_api_response(
             f"city with given location_id does not exists",
@@ -155,6 +163,7 @@ async def delete_location(**kwargs):
             status_code=HTTPStatus.BAD_REQUEST.value
         )
     
+    # delete the location
     delete_location_response = await location_manager.deleteLocation()
     if delete_location_response.get("error"):
         return send_api_response(
@@ -177,6 +186,8 @@ async def get_forecast(**kwargs):
     """
     app.logger.info(f"{LOGGER_KEY}.get_forecast")
     weather_manager = weatherManager(kwargs)
+
+    # fetches the current forecast
     forecast_data_response = await weather_manager.getForecast()
     if forecast_data_response.get("error"):
         return send_api_response(

@@ -11,7 +11,15 @@ class Units(Enum):
 class Tables(Enum):
     LOCATION = {
         "name": "locations",
-        "columns": [
+        "get_columns": [
+            "location_id::VARCHAR",
+            "city",
+            "latitude::VARCHAR",
+            "longitude::VARCHAR",
+            "state",
+            "country",
+        ],
+        "insert_columns": [
             "location_id",
             "city",
             "latitude",
@@ -25,7 +33,16 @@ class Tables(Enum):
 
     WEATHER = {
         "name": "weather",
-        "columns": [
+        "get_columns": [
+            "current_weather",
+            "description",
+            "temperature",
+            "feels_like_temperature",
+            "air_pressure",
+            "humidity",
+            "windspeed"
+        ],
+        "insert_columns": [
             "weather_id",
             "location_id",
             "current_weather",
