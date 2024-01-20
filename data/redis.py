@@ -338,7 +338,7 @@ class RedisCache:
         Closes the connection pool.
         """
         if self._pool is not None:
-            await self._pool.close()
+            self._pool.close()
 
     async def retry_connection(self):
         RedisCache.logger.info("RedisCache._retry_connection")

@@ -135,11 +135,11 @@ class weatherManager:
             columns = ",".join(columns)
             query = f"INSERT INTO {table_name} ({columns}) VALUES ('{self.weather_id}', '{self.location_id}', '{self.current_weather}'"
             query += f", '{self.description}'" if self.description else ", null"
-            query += f", {self.temperature}" if self.temperature else ", null"
-            query += f", {self.feels_like_temperature}" if self.feels_like_temperature else ", null"
-            query += f", {self.air_pressure}" if self.air_pressure else ", null"
-            query += f", {self.humidity}" if self.humidity else ", null"
-            query += f", {self.windspeed}" if self.windspeed else ", null"
+            query += f", {self.temperature}" if self.temperature != None else ", null"
+            query += f", {self.feels_like_temperature}" if self.feels_like_temperature != None else ", null"
+            query += f", {self.air_pressure}" if self.air_pressure != None else ", null"
+            query += f", {self.humidity}" if self.humidity != None else ", null"
+            query += f", {self.windspeed}" if self.windspeed != None else ", null"
             query += f", '{datetime.now()}'"
             query += f", '{datetime.now()}');"
 

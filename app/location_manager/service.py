@@ -4,8 +4,9 @@ from uuid import uuid4
 from http import HTTPStatus
 from datetime import datetime
 from quart import current_app as app
+from geopy.geocoders import Nominatim
 
-from ..constants import Tables
+from ..constants import Tables, COUNTRY_CODES, COUNTRY_CODES_TO_NAMES
 from app.settings import (
     OPEN_WEATHER_API_KEY,
     OPEN_WEATHER_API_BASE_URL,
@@ -31,7 +32,14 @@ class locationManager:
         app.logger.info(f"{LOGGER_KEY}.fetchLocations")
         response = {"error": None, "data": [], "status_code": None}
 
+
         try:
+            if self.latitude and self.longitude:
+                valid_lat_long = self.validate_latitude_and_longitude()
+                if not valid_lat_long:
+                    response["error"] = f"latitude {self.latitude}, longitude {self.longitude} does not points to {self.city}"
+                    response["status_code"] = HTTPStatus.BAD_REQUEST.value
+            
             # check in cache 
             cached_location_data = None
             if self.location_id:
@@ -81,8 +89,13 @@ class locationManager:
         response = {"error": None, "data": [], "status_code": None}
         try:
             url = f"{OPEN_WEATHER_API_BASE_URL}/{OPEN_WEATHER_GEO_PARAMS}"
+            if self.country:
+                country_code = COUNTRY_CODES.get(self.country)
+                city_param = f"{self.city},{country_code}"
+            else:
+                city_param = self.city
             params = {
-                "q": self.city,
+                "q": city_param,
                 "appid": OPEN_WEATHER_API_KEY
             }
             app.logger.info(f"{LOGGER_KEY}.setLatLong.url: {url}")
@@ -98,11 +111,16 @@ class locationManager:
                     response["error"] = response_text["message"]
                     response["status_code"] = HTTPStatus.FAILED_DEPENDENCY.value
                 else:
-                    # set the object data
-                    self.latitude = response_text[0].get("lat")
-                    self.longitude = response_text[0].get("lon")
-                    self.state = response_text[0].get("state")
-                    self.country = response_text[0].get("country")
+                    if response_text:
+                        # set the object data
+                        self.latitude = response_text[0].get("lat")
+                        self.longitude = response_text[0].get("lon")
+                        self.state = response_text[0].get("state","").lower()
+                        country_code = response_text[0].get("country","")
+                        self.country = COUNTRY_CODES_TO_NAMES.get(country_code, "").lower()
+                    else:
+                        response["error"] = "city does not exists"
+                        response["status_code"] = HTTPStatus.BAD_REQUEST.value
         except Exception as e:
             app.logger.error(f"{LOGGER_KEY}.setLatLong.exception: {str(e)}")
             response["error"] = str(e)
@@ -216,3 +234,19 @@ class locationManager:
         
         return response
         
+
+    def validate_latitude_and_longitude(self):
+        """
+        check if given latitude and longitude points to the given city or not
+        """
+        app.logger.info(f"{LOGGER_KEY}.validate_latitude_and_longitude")
+
+        # Initialize the geolocator
+        geolocator = Nominatim(user_agent="my_geocoder")
+
+        # Reverse geocode the coordinates to get the address
+        location = geolocator.reverse((self.latitude, self.longitude), language="en")
+
+        # Check if the city name is present in the address
+        return self.city.lower() in location.address.lower()
+

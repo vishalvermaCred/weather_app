@@ -109,5 +109,5 @@ class Postgres:
         """
         Closes the connection pool.
         """
-        logger.info("Closing connection pool")
+        # logger.info("Closing connection pool")
         await self._pool.close()
