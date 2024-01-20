@@ -1,9 +1,50 @@
-from uuid import uuid4
 import logging
+import asyncio
+from http import HTTPStatus
+from uuid import uuid4
+from functools import wraps
 from typing import Optional, Any
 from quart import current_app as app, g, request
 
 from .settings import LOG_LEVEL, SERVICE_NAME
+
+
+# Dictionary to track request timestamps for rate limiting
+request_timestamps = {}
+def rate_limit(limit, interval):
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            ip_address = request.remote_addr
+            endpoint = request.path
+
+            if ip_address not in request_timestamps:
+                request_timestamps[ip_address] = {}
+
+            if endpoint not in request_timestamps[ip_address]:
+                request_timestamps[ip_address][endpoint] = []
+
+            current_time = asyncio.get_event_loop().time()
+
+            # Remove timestamps older than the interval
+            request_timestamps[ip_address][endpoint] = [
+                timestamp for timestamp in request_timestamps[ip_address][endpoint] if
+                current_time - timestamp < interval
+            ]
+
+            if len(request_timestamps[ip_address][endpoint]) >= limit:
+                return send_api_response(
+                    "Rate limit exceeded. Try again later.",
+                    False,
+                    status_code=HTTPStatus.TOO_MANY_REQUESTS.value
+                )
+
+            # Record the current timestamp
+            request_timestamps[ip_address][endpoint].append(current_time)
+            return await func(*args, **kwargs)
+        return wrapper
+    return decorator
+
 
 
 def get_logger():

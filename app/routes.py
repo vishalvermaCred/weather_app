@@ -4,8 +4,8 @@ from quart_schema import validate_request, validate_querystring
 
 from app.location_manager.service import locationManager
 from app.weather_manager.service import weatherManager
-from app.settings import BASE_ROUTE, SERVICE_NAME
-from app.utils import send_api_response
+from app.settings import BASE_ROUTE, SERVICE_NAME, API_REQUEST_LIMIT, API_REQUEST_PERIOD
+from app.utils import send_api_response, rate_limit
 from app.validator import (
     AddLocation,
     PutLocation,
@@ -26,6 +26,7 @@ async def health_check():
 
 @bp.route("/locations", methods=["GET"])
 @bp.route("/locations/<location_id>", methods= ["GET"])
+@rate_limit(API_REQUEST_LIMIT, API_REQUEST_PERIOD)
 async def get_locations(**kwargs):
     """
     API to get the list of all locations added
@@ -49,6 +50,7 @@ async def get_locations(**kwargs):
 
 
 @bp.route("/locations", methods=["POST"])
+@rate_limit(API_REQUEST_LIMIT, API_REQUEST_PERIOD)
 @validate_request(AddLocation)
 async def add_locations(data: AddLocation):
     """
@@ -94,6 +96,7 @@ async def add_locations(data: AddLocation):
 
 
 @bp.route("/locations/<location_id>", methods=["PUT"])
+@rate_limit(API_REQUEST_LIMIT, API_REQUEST_PERIOD)
 @validate_request(PutLocation)
 async def put_location(data:PutLocation, **kwargs):
     """
@@ -139,6 +142,7 @@ async def put_location(data:PutLocation, **kwargs):
 
 
 @bp.route("/locations/<location_id>", methods=["DELETE"])
+@rate_limit(API_REQUEST_LIMIT, API_REQUEST_PERIOD)
 async def delete_location(**kwargs):
     """
     API to delete the location against the location_id
@@ -180,6 +184,7 @@ async def delete_location(**kwargs):
 
 
 @bp.route("/weather/<location_id>", methods=["GET"])
+@rate_limit(API_REQUEST_LIMIT, API_REQUEST_PERIOD)
 async def get_forecast(**kwargs):
     """
     get forecast using third api and store the result
@@ -205,6 +210,7 @@ async def get_forecast(**kwargs):
 
 
 @bp.route("/history/<location_id>", methods=["GET"])
+@rate_limit(API_REQUEST_LIMIT, API_REQUEST_PERIOD)
 @validate_querystring(GetHistory)
 async def get_history(**kwargs):
     """

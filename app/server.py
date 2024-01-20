@@ -1,6 +1,5 @@
 import json
 import traceback
-
 from pydantic.error_wrappers import ValidationError
 from quart import Quart, g, request
 from quart_schema import QuartSchema, RequestSchemaValidationError
