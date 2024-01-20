@@ -40,12 +40,12 @@ uvicorn app.server:app --reload --port 9200
 #### Request Body
 1. The request body should be in raw JSON format.
 2. It should include the following parameters:
-    city (string): The name of the city for the location.
-    latitude (number): The latitude coordinate of the location. (optional)
-    longitude (number): The longitude coordinate of the location. (optional)
-    state (string): The state or region of the location. (optional)
-    country (string): The country of the location. (optional)
-3. For more accuracy provide state and country, if latitude and longitude are not available 
+    I. city (string): The name of the city for the location.
+   II. latitude (number): The latitude coordinate of the location. (optional)
+  III. longitude (number): The longitude coordinate of the location. (optional)
+   IV. state (string): The state or region of the location. (optional)
+    V. country (string): The country of the location. (optional)
+4. For more accuracy provide state and country, if latitude and longitude are not available 
 
 #### Sample Body
 ```bash
