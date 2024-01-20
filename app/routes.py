@@ -9,6 +9,7 @@ from app.utils import send_api_response
 from app.validator import (
     AddLocation,
     PutLocation,
+    GetHistory,
 )
 
 bp = Blueprint(SERVICE_NAME, __name__, url_prefix=BASE_ROUTE)
@@ -188,5 +189,33 @@ async def get_forecast(**kwargs):
         f"forecast fetched",
         True,
         data= forecast_data_response.get("data"),
+        status_code=HTTPStatus.OK.value
+    )
+
+
+@bp.route("/history/<location_id>", methods=["GET"])
+@validate_querystring(GetHistory)
+async def get_history(**kwargs):
+    """
+    get the history of last 7 or 15 or 30 days
+    """
+    app.logger.info(f"{LOGGER_KEY}.get_history")
+    query_args = kwargs.get("query_args")
+    query_args = query_args.dict()
+    query_args['location_id'] = kwargs.get("location_id")
+
+    weather_manager = weatherManager(query_args)
+    history_data_response = await weather_manager.getHistory()
+    if history_data_response.get("error"):
+        return send_api_response(
+            f"Failed to fetch the history: {history_data_response['error']}",
+            False,
+            status_code=history_data_response.get("status_code")
+        )
+
+    return send_api_response(
+        f"history fetched successfully",
+        True,
+        data = history_data_response['data'],
         status_code=HTTPStatus.OK.value
     )

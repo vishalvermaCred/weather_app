@@ -26,6 +26,7 @@ class weatherManager:
         self.air_pressure = kwargs.get("air_pressure")
         self.humidity = kwargs.get("humidity")
         self.windspeed = kwargs.get("windspeed")
+        self.days = kwargs.get("days")
         self.location_manager = locationManager(kwargs)
     
     async def getWeatherData(self):
@@ -41,7 +42,7 @@ class weatherManager:
             columns.remove("updated")
             columns = ",".join(columns)
 
-            query = f"SELECT {columns} FROM {table_name} where location_id='{self.location_id}' order by created desc limit 1;"
+            query = f"SELECT {columns} FROM {table_name} where location_id='{self.location_id}' and now()-created <= INTERVAL '1 hour' order by created desc limit 1;"
             weather_data = await app.db.execute_raw_select_query(query)
             if weather_data:
                 response["data"] = weather_data[0]
@@ -151,6 +152,26 @@ class weatherManager:
             response["status_code"] = HTTPStatus.INTERNAL_SERVER_ERROR.value
         
         return response
+    
+
+    async def getRealTimeWeatherData(self, location_details):
+        """
+        get the real time weather data
+        """
+        app.logger.info(f"{LOGGER_KEY}.getRealTimeWeatherData")
+        response = {"error": None, "data": [], "status_code": None}
+        try:
+            weather_data = await self.getOpenWeatherData(location_details)
+            if weather_data.get("error"):
+                return weather_data
+            weather_data["data"]["city"] = location_details["city"]
+            response["data"] = weather_data["data"]
+        except Exception as e:
+            app.logger.error(f"{LOGGER_KEY}.getRealTimeWeatherData.exception: {str(e)}")
+            response["error"] = str(e)
+            response["status_code"] = HTTPStatus.INTERNAL_SERVER_ERROR.value
+        
+        return response
 
 
     async def getForecast(self):
@@ -168,8 +189,8 @@ class weatherManager:
                 response["error"] = "location does not exist"
                 response["status_code"] = HTTPStatus.BAD_REQUEST.value
                 return response
-            
             location_details = location_data_response["data"][0]
+
             weather_data = await self.getWeatherData()
             if weather_data.get("error"):
                 return weather_data
@@ -178,17 +199,17 @@ class weatherManager:
                 self.setWeatherData(weather_data)
             
             if not weather_data:
-                weather_data = await self.getOpenWeatherData(location_details)
-                if weather_data.get("error"):
-                    return weather_data
-                weather_data = weather_data["data"]
+                weather_data_response = await self.getRealTimeWeatherData(location_details)
+                if weather_data_response.get("error"):
+                    return weather_data_response
+                weather_data = weather_data_response["data"]
             
                 self.setWeatherDataFromOpenWeather(weather_data)
                 insert_response = await self.insertWeatherData()
                 if insert_response.get("error"):
                     return insert_response
             
-            weather_data = {
+            weather_data_formatted = {
                 "city": location_details.get("city"),
                 "current_weather": f"{self.current_weather}",
                 "description": self.description,
@@ -198,10 +219,91 @@ class weatherManager:
                 "humidity": f"{self.humidity}{Units.HUMIDITY.value}",
                 "windspeed": f"{self.windspeed} {Units.WINDSPEED.value}"
             }
-            response["data"] = weather_data
-            
+            response["data"] = weather_data_formatted 
         except Exception as e:
             app.logger.error(f"{LOGGER_KEY}.getForecast.exception: {str(e)}")
+            response["error"] = str(e)
+            response["status_code"] = HTTPStatus.INTERNAL_SERVER_ERROR.value
+        
+        return response
+
+
+    async def getHistoricalWeatherData(self):
+        """
+        get the last 7 or 15 or 30 days data from DB
+        """
+        app.logger.info(f"{LOGGER_KEY}.getWeatherData")
+        response = {"error": None, "data": [], "status_code": None}
+        try:
+            table_name = Tables.WEATHER.value["name"]
+            columns = Tables.WEATHER.value["columns"].copy()
+            columns.remove("weather_id")
+            columns.remove("location_id")
+            columns.remove("created")
+            columns.remove("updated")
+            columns = ",".join(columns)
+            interval = f"{self.days} days"
+
+            query = f"SELECT {columns} FROM {table_name} where location_id='{self.location_id}' and now()-created <= INTERVAL '{interval}';"
+            weather_data = await app.db.execute_raw_select_query(query)
+            response["data"] = weather_data
+        except Exception as e:
+            app.logger.error(f"{LOGGER_KEY}.getForecast.exception: {str(e)}")
+            response["error"] = str(e)
+            response["status_code"] = HTTPStatus.INTERNAL_SERVER_ERROR.value
+        return response
+
+    def getAttributeSummary(self, attribute):
+        attribute_summary = {
+            "max": max(attribute),
+            "min": min(attribute),
+            "average": sum(attribute)/len(attribute)
+        }
+        return attribute_summary
+
+    def getSummary(self, history_data):
+        """
+        drive the summary of out of the history data
+        """
+        app.logger.info(f"{LOGGER_KEY}.getSummary")
+        temperature, air_pressure, humidity, windspeed = [],[],[],[]
+        for weather_data in history_data:
+            temperature.append(weather_data["temperature"])
+            air_pressure.append(weather_data["air_pressure"])
+            humidity.append(weather_data["humidity"])
+            windspeed.append(weather_data["windspeed"])
+        
+        summary = {
+            "temperature": self.getAttributeSummary(temperature),
+            "air_pressure": self.getAttributeSummary(air_pressure),
+            "humidity": self.getAttributeSummary(humidity),
+            "windspeed": self.getAttributeSummary(windspeed),
+        }
+        return summary
+
+
+    async def getHistory(self):
+        """
+        fetches the history of last 7 or 15 or 30 days
+        """
+        app.logger.info(f"{LOGGER_KEY}.getHistory")
+        response = {"error": None, "data": [], "status_code": None}
+
+        try:
+            history_data = await self.getHistoricalWeatherData()
+            if history_data.get("error"):
+                return history_data
+            if not history_data.get("data"):
+                response["error"] = "No history data available"
+                response["status_code"] = HTTPStatus.OK.value
+            history_data = history_data["data"]
+            summary_response = self.getSummary(history_data)
+            response["data"] = {
+                "history_data": history_data,
+                "summary": summary_response
+            }
+        except Exception as e:
+            app.logger.error(f"{LOGGER_KEY}.getHistory.exception: {str(e)}")
             response["error"] = str(e)
             response["status_code"] = HTTPStatus.INTERNAL_SERVER_ERROR.value
         
