@@ -10,11 +10,11 @@ copy all the data from .env.example to newly created .env
 2. In terminal, go to the project directory
 3. run command
     ```bash
-       docker build -t weather-app .
+    docker build -t weather-app .
     ```
 4. after successful docker image creation run next command
     ```bash
-       docker compose up
+    docker compose up
     ```
 5. Now follow the documentation
 
