@@ -1,7 +1,20 @@
 # weather_app
 The Weather App is a simple and intuitive application that provides real-time and historical weather forecasts for specified locations. It fetches weather data from a reliable external weather service, allowing users to access accurate and up-to-date information.
 
-## SETUP
+## SETUP - with Docker
+### create .env file
+copy all the data from .env.example to newly created .env
+
+### Docker setup steps
+1. Install and start the Dockers
+2. In terminal, go to the project directory
+3. run command
+4. ```bash docker build -t weather-app . ```
+5. after successful docker image creation run next command
+6. ```bash docker compose up```
+7. Now follow the documentation
+
+## SETUP - Local Setup
 
 ### DB-SETUP
 1. start PostgreSQL server in local
