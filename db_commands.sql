@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS locations (
 
 CREATE TABLE IF NOT EXISTS weather (
     weather_id UUID PRIMARY KEY,
-    location_id UUID REFERENCES locations(location_id),
+    location_id UUID REFERENCES locations(location_id) ON DELETE CASCADE,
     current_weather VARCHAR(50),
     description VARCHAR(100),
     temperature INTEGER NOT NULL,
