@@ -42,11 +42,14 @@ async def _init():
         error = f"unable to verify these config {str(verify_envs[1])}"
         raise MissingEnvConfigsException(message=error)
 
+    await _init_redis()
+    app.logger.info("redis initialized")
+
     await _init_db()
     app.logger.info("all dbs initialized")
 
-    await _init_redis()
-    app.logger.info("redis initialized")
+    await _setup_db()
+    app.logger.info("DB setup completed")
 
     _register_blueprints()
 
@@ -81,6 +84,17 @@ async def _init_db():
     app.db = Postgres(**db_kwargs)
     await app.db.connect()
     app.logger.info("weather app db connected")
+    return
+
+
+async def _setup_db():
+    # Read and execute SQL commands from the file
+    with open("./db_commands.sql", 'r') as file:
+        sql_commands = file.read()
+
+    sql_commands = f"BEGIN; {sql_commands} COMMIT;"
+    response = await app.db.execute_raw_transaction_query(sql_commands)
+    app.logger.info(f"response: {response}")
     return
 
 
