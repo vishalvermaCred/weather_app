@@ -8,15 +8,19 @@ copy all the data from .env.example to newly created .env
 ### Docker setup steps
 1. Install and start the Dockers
 2. In terminal, go to the project directory
-3. run command
+3. run below command to create new network
+    ```bash
+    docker network create weather-network
+    ```
+4. run command to create docker image of app
     ```bash
     docker build -t weather-app .
     ```
-4. after successful docker image creation run next command
+5. after successful docker image creation run next command
     ```bash
     docker compose up
     ```
-5. Now follow the documentation
+6. Now follow the documentation
 
 ## SETUP - Local Setup
 
